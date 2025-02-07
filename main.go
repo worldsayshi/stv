@@ -49,9 +49,13 @@ func main() {
 		SetBorders(true).
 		SetTitle(" Tables ").
 		SetTitleAlign(tview.AlignLeft)
+	table.
+		SetSelectable(true, false) // Enable row selection, disable column selection
 
 	// Set headers
-	table.SetCell(0, 0, tview.NewTableCell("Table Name").SetTextColor(tcell.ColorYellow).SetSelectable(false))
+	table.SetCell(0, 0, tview.NewTableCell("Table Name").
+		SetTextColor(tcell.ColorYellow).
+		SetSelectable(false))
 
 	// Get and display tables
 	tables, err := getTables(db)
@@ -63,11 +67,14 @@ func main() {
 		table.SetCell(i+1, 0, tview.NewTableCell(tableName))
 	}
 
-	table.SetSelectedFunc(func(row, column int) {
-		// Will implement table view navigation in next step
-	})
+	// Select first row by default (after header)
+	table.Select(1, 0)
 
-	if err := app.SetRoot(table, true).EnableMouse(true).Run(); err != nil {
+	if err := app.
+		SetRoot(table, true).
+		SetFocus(table). // Ensure table has focus at startup
+		EnableMouse(true).
+		Run(); err != nil {
 		log.Fatal(err)
 	}
 }
