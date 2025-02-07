@@ -1,5 +1,11 @@
 Visualize an sqlite database using tview in go.
 
+# Installation
+
+```bash
+go install github.com/worldsayshi/stv
+```
+
 # Considerations
 
 - This app will display a lot of tview tables with various content. It should work quite similarly to k9s, but aimed at displaying sqlite data instead of k8s data.
