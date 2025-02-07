@@ -105,18 +105,18 @@ func main() {
 
 	app := tview.NewApplication()
 
-	// Create two tables: one for table list and one for data
+	// Create tables view
 	tables := tview.NewTable()
 	tables.
 		SetBorders(true).
-		SetTitle(" Tables ").
+		SetTitle(" Tables (Enter to view, Esc to go back) ").
 		SetTitleAlign(tview.AlignLeft)
 	tables.SetSelectable(true, false)
 
+	// Create data view
 	data := tview.NewTable()
 	data.
 		SetBorders(true).
-		SetTitle(" Data ").
 		SetTitleAlign(tview.AlignLeft)
 	data.SetSelectable(true, true)
 
@@ -135,54 +135,71 @@ func main() {
 		tables.SetCell(i+1, 0, tview.NewTableCell(tableName))
 	}
 
+	// Current view state
+	currentView := tables
+	//var selectedTable string
+
 	// Handle table selection
-	tables.SetSelectedFunc(func(row, column int) {
-		if row > 0 {
-			tableName := tableList[row-1]
+	updateDataView := func(tableName string) {
+		//selectedTable = tableName
+		data.Clear()
+		data.SetTitle(fmt.Sprintf(" Table: %s (Esc to go back) ", tableName))
 
-			// Clear existing data
-			data.Clear()
+		// Get columns
+		columns, err := getTableInfo(db, tableName)
+		if err != nil {
+			log.Printf("Error getting columns: %v", err)
+			return
+		}
 
-			// Get columns
-			columns, err := getTableInfo(db, tableName)
-			if err != nil {
-				log.Printf("Error getting columns: %v", err)
-				return
-			}
+		// Set headers
+		for i, col := range columns {
+			data.SetCell(0, i, tview.NewTableCell(col).
+				SetTextColor(tcell.ColorYellow).
+				SetSelectable(false))
+		}
 
-			// Set headers
-			for i, col := range columns {
-				data.SetCell(0, i, tview.NewTableCell(col).
-					SetTextColor(tcell.ColorYellow).
-					SetSelectable(false))
-			}
+		// Get and display data
+		rows, err := getTableData(db, tableName)
+		if err != nil {
+			log.Printf("Error getting data: %v", err)
+			return
+		}
 
-			// Get and display data
-			rows, err := getTableData(db, tableName)
-			if err != nil {
-				log.Printf("Error getting data: %v", err)
-				return
-			}
-
-			for i, row := range rows {
-				for j, cell := range row {
-					data.SetCell(i+1, j, tview.NewTableCell(cell))
-				}
+		for i, row := range rows {
+			for j, cell := range row {
+				data.SetCell(i+1, j, tview.NewTableCell(cell))
 			}
 		}
-	})
+	}
 
-	// Create flex layout
-	flex := tview.NewFlex().
-		AddItem(tables, 20, 1, true).
-		AddItem(data, 0, 1, false)
+	// Handle keyboard input
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			if currentView == tables {
+				row, _ := tables.GetSelection()
+				if row > 0 {
+					tableName := tableList[row-1]
+					updateDataView(tableName)
+					currentView = data
+					app.SetRoot(data, true)
+				}
+			}
+		case tcell.KeyEscape:
+			if currentView == data {
+				currentView = tables
+				app.SetRoot(tables, true)
+			}
+		}
+		return event
+	})
 
 	// Select first row by default (after header)
 	tables.Select(1, 0)
 
 	if err := app.
-		SetRoot(flex, true).
-		SetFocus(tables).
+		SetRoot(tables, true).
 		EnableMouse(true).
 		Run(); err != nil {
 		log.Fatal(err)
