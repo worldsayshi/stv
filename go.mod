@@ -1,4 +1,4 @@
-module stv
+module github.com/worldsayshi/stv
 
 go 1.22.1
 
